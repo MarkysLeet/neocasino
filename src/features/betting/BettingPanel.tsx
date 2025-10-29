@@ -22,6 +22,7 @@ const BettingPanel = ({ onCashOut }: BettingPanelProps) => {
     amount,
     balance,
     autoCashout,
+    autoCashoutEnabled,
     betLocked,
     autoLocked,
     hasActiveBet,
@@ -30,15 +31,21 @@ const BettingPanel = ({ onCashOut }: BettingPanelProps) => {
     acceptBet,
     setBetLocked,
     setAutoLocked,
-    setAutoCashout
+    setAutoCashout,
+    setAutoCashoutEnabled
   } = useBettingStore();
   const { phase, multiplier, cashedOutAt } = useGameStore();
   const addToast = useToastStore((state) => state.addToast);
   const [localAutoCashout, setLocalAutoCashout] = useState(autoCashout);
+  const [localAutoEnabled, setLocalAutoEnabled] = useState(Boolean(autoCashoutEnabled));
 
   useEffect(() => {
     setLocalAutoCashout(autoCashout);
   }, [autoCashout]);
+
+  useEffect(() => {
+    setLocalAutoEnabled(Boolean(autoCashoutEnabled));
+  }, [autoCashoutEnabled]);
 
   const handlePlaceBet = () => {
     if (amount <= 0 || amount > balance) {
@@ -67,6 +74,20 @@ const BettingPanel = ({ onCashOut }: BettingPanelProps) => {
       setLocalAutoCashout(numeric);
       setAutoCashout(numeric);
     }
+  };
+
+  const toggleAutoCashout = () => {
+    if (autoLocked) {
+      addToast({ message: t('toast.autoCashoutLocked'), tone: 'warning' });
+      return;
+    }
+    const next = !localAutoEnabled;
+    setLocalAutoEnabled(next);
+    setAutoCashoutEnabled(next);
+    addToast({
+      message: next ? t('bet.autoCashoutEnabled') : t('bet.autoCashoutDisabled'),
+      tone: next ? 'success' : 'info'
+    });
   };
 
   const currentLabel =
@@ -113,7 +134,21 @@ const BettingPanel = ({ onCashOut }: BettingPanelProps) => {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/50">
               <span>{t('bet.autoCashout')}</span>
-              {autoLocked && <span className="text-neon">{t('bet.pending')}</span>}
+              <div className="flex items-center gap-2">
+                {autoLocked && <span className="text-neon">{t('bet.pending')}</span>}
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  type="button"
+                  className={`focus-ring rounded-full border px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.2em] transition ${
+                    localAutoEnabled
+                      ? 'border-neon/60 bg-neon/10 text-neon'
+                      : 'border-white/10 bg-white/5 text-white/60 hover:border-white/30 hover:text-white/80'
+                  }`}
+                  onClick={toggleAutoCashout}
+                >
+                  {localAutoEnabled ? t('bet.autoOn') : t('bet.autoOff')}
+                </motion.button>
+              </div>
             </div>
             <input
               type="number"
@@ -121,7 +156,8 @@ const BettingPanel = ({ onCashOut }: BettingPanelProps) => {
               step={0.01}
               value={localAutoCashout}
               onChange={(event) => handleAutoCashoutChange(Number(event.target.value))}
-              className="focus-ring rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-lg font-semibold text-white placeholder:text-white/30"
+              disabled={!localAutoEnabled}
+              className="focus-ring rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-lg font-semibold text-white placeholder:text-white/30 disabled:cursor-not-allowed disabled:border-white/5 disabled:text-white/30"
             />
           </div>
         </Tooltip>

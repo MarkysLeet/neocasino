@@ -8,7 +8,15 @@ import { useToastStore } from '../stores/toastStore';
 
 const QuickActionsPanel = () => {
   const { t } = useTranslation();
-  const { double, applyPreset, resetBalance, lastAmount, setAutoCashout, autoLocked } = useBettingStore();
+  const {
+    double,
+    applyPreset,
+    lastAmount,
+    setAutoCashout,
+    autoLocked,
+    autoCashoutEnabled,
+    setAutoCashoutEnabled
+  } = useBettingStore();
   const addToast = useToastStore((state) => state.addToast);
 
   const handleAuto = () => {
@@ -17,6 +25,7 @@ const QuickActionsPanel = () => {
       return;
     }
     setAutoCashout(2);
+    setAutoCashoutEnabled(true);
     addToast({ message: t('graph.autoCashout', { value: '2.00' }), tone: 'info' });
   };
 
@@ -38,6 +47,27 @@ const QuickActionsPanel = () => {
               {t('quick.auto')}
             </motion.button>
           </Tooltip>
+          <Tooltip text={t('quick.tooltip.toggleAuto')}>
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              type="button"
+              className="focus-ring rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/80 transition hover:border-neon/50 hover:text-white"
+              onClick={() => {
+                if (autoLocked) {
+                  addToast({ message: t('toast.autoCashoutLocked'), tone: 'warning' });
+                  return;
+                }
+                const next = !autoCashoutEnabled;
+                setAutoCashoutEnabled(next);
+                addToast({
+                  message: next ? t('bet.autoCashoutEnabled') : t('bet.autoCashoutDisabled'),
+                  tone: next ? 'success' : 'info'
+                });
+              }}
+            >
+              {autoCashoutEnabled ? t('quick.disableAuto') : t('quick.enableAuto')}
+            </motion.button>
+          </Tooltip>
           <Tooltip text={t('quick.tooltip.repeat')}>
             <motion.button
               whileTap={{ scale: 0.98 }}
@@ -56,16 +86,6 @@ const QuickActionsPanel = () => {
               onClick={() => double()}
             >
               {t('quick.double')}
-            </motion.button>
-          </Tooltip>
-          <Tooltip text={t('quick.tooltip.reset')}>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              type="button"
-              className="focus-ring rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/80 transition hover:border-neon/50 hover:text-white"
-              onClick={() => resetBalance(1000)}
-            >
-              {t('quick.resetBalance')}
             </motion.button>
           </Tooltip>
         </div>

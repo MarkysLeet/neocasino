@@ -6,6 +6,7 @@ export interface BetState {
   lastAmount: number;
   balance: number;
   autoCashout: number;
+  autoCashoutEnabled: boolean;
   betLocked: boolean;
   autoLocked: boolean;
   hasActiveBet: boolean;
@@ -16,11 +17,11 @@ export interface BetState {
   setBetLocked: (locked: boolean) => void;
   setAutoLocked: (locked: boolean) => void;
   setAutoCashout: (value: number) => void;
+  setAutoCashoutEnabled: (enabled: boolean) => void;
   acceptBet: () => void;
   payout: (multiplier: number) => void;
   lose: (amount: number) => void;
   clearBet: () => void;
-  resetBalance: (value: number) => void;
 }
 
 const clampAmount = (value: number) => {
@@ -35,6 +36,7 @@ export const useBettingStore = create<BetState>()(
       lastAmount: 1,
       balance: 1000,
       autoCashout: 1.5,
+      autoCashoutEnabled: false,
       betLocked: false,
       autoLocked: false,
       hasActiveBet: false,
@@ -45,6 +47,7 @@ export const useBettingStore = create<BetState>()(
       setBetLocked: (betLocked) => set({ betLocked }),
       setAutoLocked: (autoLocked) => set({ autoLocked }),
       setAutoCashout: (autoCashout) => set({ autoCashout }),
+      setAutoCashoutEnabled: (autoCashoutEnabled) => set({ autoCashoutEnabled: Boolean(autoCashoutEnabled) }),
       acceptBet: () =>
         set((state) => ({
           balance: clampAmount(state.balance - state.amount),
@@ -59,8 +62,7 @@ export const useBettingStore = create<BetState>()(
         set((state) => ({
           balance: clampAmount(state.balance - amount)
         })),
-      clearBet: () => set({ hasActiveBet: false, betLocked: false, autoLocked: false }),
-      resetBalance: (value) => set({ balance: clampAmount(value) })
+      clearBet: () => set({ hasActiveBet: false, betLocked: false, autoLocked: false })
     }),
     {
       name: 'rocket-bet-store'

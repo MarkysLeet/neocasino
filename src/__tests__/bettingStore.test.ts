@@ -25,4 +25,12 @@ describe('betting store', () => {
     });
     expect(useBettingStore.getState().autoCashout).toBeCloseTo(5.4567, 2);
   });
+
+  it('toggles auto cashout enablement', () => {
+    expect(useBettingStore.getState().autoCashoutEnabled).toBe(false);
+    act(() => {
+      useBettingStore.getState().setAutoCashoutEnabled(true);
+    });
+    expect(useBettingStore.getState().autoCashoutEnabled).toBe(true);
+  });
 });

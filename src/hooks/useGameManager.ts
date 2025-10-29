@@ -7,7 +7,7 @@ import { useHistoryStore } from '../stores/historyStore';
 import { useToastStore } from '../stores/toastStore';
 
 const BETTING_DURATION = 5000;
-const NEXT_ROUND_DELAY = 3000;
+const NEXT_ROUND_DELAY = 10000;
 
 const useGameManager = () => {
   const {
@@ -30,6 +30,7 @@ const useGameManager = () => {
     setBetLocked,
     setAutoLocked,
     autoCashout,
+    autoCashoutEnabled,
     payout,
     clearBet,
     hasActiveBet
@@ -123,7 +124,7 @@ const useGameManager = () => {
         const elapsed = time - roundStart.current;
         const currentMultiplier = calculateMultiplier(elapsed);
         setMultiplier(currentMultiplier);
-        if (hasActiveBet && !cashedOutAt && currentMultiplier >= autoCashout) {
+        if (autoCashoutEnabled && hasActiveBet && !cashedOutAt && currentMultiplier >= autoCashout) {
           payout(autoCashout);
           setCashedOutAt(autoCashout);
           addToast({ message: `Auto cashout ${autoCashout.toFixed(2)}×`, tone: 'info' });
@@ -157,7 +158,7 @@ const useGameManager = () => {
     return () => {
       if (rAF.current) cancelAnimationFrame(rAF.current);
     };
-  }, [phase, setPhase, setMultiplier, setStartTimestamp, autoCashout, crashPoint, concludeRound, initRound, setBetLocked, setAutoLocked, setNextRoundCountdown, payout, addToast, cashedOutAt, hasActiveBet, setCashedOutAt]);
+  }, [phase, setPhase, setMultiplier, setStartTimestamp, autoCashout, autoCashoutEnabled, crashPoint, concludeRound, initRound, setBetLocked, setAutoLocked, setNextRoundCountdown, payout, addToast, cashedOutAt, hasActiveBet, setCashedOutAt]);
 
   useEffect(() => {
     initRound();
