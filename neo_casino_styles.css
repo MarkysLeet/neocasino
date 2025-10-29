@@ -2647,24 +2647,6 @@ body.dark-mode .rocket-preset {
   gap: 12px;
 }
 
-.rocket-reset {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 18px;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-main);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.rocket-reset:hover,
-.rocket-reset:focus-visible {
-  transform: translateY(-2px);
-  background: rgba(169, 112, 255, 0.2);
-  outline: none;
-}
-
 .rocket-disclaimer {
   background: rgba(0, 212, 255, 0.08);
   border-radius: 18px;

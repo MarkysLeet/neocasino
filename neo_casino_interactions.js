@@ -116,7 +116,13 @@ const rocketNonceEl = document.getElementById("rocketNonce");
 const rocketNextRoundBlock = document.getElementById("rocketNextRound");
 const rocketRepeatButton = document.getElementById("rocketRepeat");
 const rocketDoubleButton = document.getElementById("rocketDouble");
-const rocketResetDemoButton = document.getElementById("rocketResetDemo");
+const rocketSprite = new Image();
+let rocketSpriteReady = false;
+rocketSprite.crossOrigin = "anonymous";
+rocketSprite.src = "https://i.imgur.com/eUfuIFD.png";
+rocketSprite.onload = () => {
+  rocketSpriteReady = true;
+};
 const rocketStage = document.querySelector(".rocket-stage");
 
 const ROCKET_CLIENT_SEED_KEY = "neoCasinoRocketClientSeed";
@@ -330,13 +336,12 @@ let rocketAutoTarget = 0;
 
 const rocketConfig = {
   bettingDuration: 5000,
-  nextRoundDelay: 3200,
-  growthRate: 1.85,
+  nextRoundDelay: 6000,
+  growthRate: 1.1,
   minBet: 10,
   autoMin: 1.01,
   maxHistory: 18,
   starCount: 120,
-  demoRecharge: 10000,
 };
 const appState = {
   isAuthenticated: false,
@@ -973,10 +978,36 @@ function renderRocketScene() {
     ctx.arc(rocketX, rocketY, 40 * ratio, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "rgba(248, 251, 255, 0.9)";
-    ctx.beginPath();
-    ctx.ellipse(rocketX, rocketY, 14 * ratio, 6 * ratio, 0.35, 0, Math.PI * 2);
-    ctx.fill();
+    const fallbackWidth = 28 * ratio;
+    const fallbackHeight = 12 * ratio;
+    if (rocketSpriteReady) {
+      const spriteRatio =
+        rocketSprite.naturalWidth && rocketSprite.naturalHeight
+          ? rocketSprite.naturalWidth / rocketSprite.naturalHeight
+          : 1;
+      const spriteHeight = Math.max(height * 0.12, 90 * ratio);
+      const spriteWidth = spriteHeight * spriteRatio;
+      ctx.drawImage(
+        rocketSprite,
+        rocketX - spriteWidth / 2,
+        rocketY - spriteHeight / 2,
+        spriteWidth,
+        spriteHeight
+      );
+    } else {
+      ctx.fillStyle = "rgba(248, 251, 255, 0.9)";
+      ctx.beginPath();
+      ctx.ellipse(
+        rocketX,
+        rocketY,
+        fallbackWidth,
+        fallbackHeight,
+        0.35,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
 
     if (rocketCashoutPoint) {
       const cashoutX = marginX + rocketCashoutPoint.progress * (width - marginX * 2);
@@ -1481,19 +1512,6 @@ function handleRocketDouble() {
   const doubled = roundCurrency(current * 2);
   rocketBetInput.value = doubled.toString();
   rocketLastBetAmount = doubled;
-}
-
-function handleRocketResetBalance() {
-  if (!appState.isAuthenticated || !appState.currentAccount) {
-    showFeedback("Авторизуйтесь, чтобы управлять балансом.");
-    return;
-  }
-  appState.currentAccount.balance = roundCurrency(
-    (appState.currentAccount.balance ?? 0) + rocketConfig.demoRecharge
-  );
-  persistCurrentUser();
-  updateBalanceDisplays();
-  showFeedback(`Демо-баланс пополнен на ${formatCurrency(rocketConfig.demoRecharge)}.`);
 }
 
 function handleRocketAutoChange() {
@@ -3141,7 +3159,6 @@ rocketAdjustButtons.forEach((button) => {
 });
 rocketRepeatButton?.addEventListener("click", handleRocketRepeat);
 rocketDoubleButton?.addEventListener("click", handleRocketDouble);
-rocketResetDemoButton?.addEventListener("click", handleRocketResetBalance);
 rocketAutoInput?.addEventListener("change", handleRocketAutoChange);
 rocketAutoInput?.addEventListener("blur", handleRocketAutoChange);
 rocketBetInput?.addEventListener("change", handleRocketBetInput);
