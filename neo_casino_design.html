@@ -355,17 +355,17 @@
           <p class="rating">★ 4.5</p>
           <button class="btn secondary" disabled>Скоро</button>
         </article>
-        <article class="game-card offline">
+        <article class="game-card offline" data-game="rocket">
           <figure class="game-thumb">
             <img
-              src="https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=400&q=80"
-              alt="Неоновая вспышка в темном казино"
+              src="https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=400&q=80"
+              alt="Ракета с неоновым световым шлейфом"
               loading="lazy"
             />
           </figure>
-          <h3>Neon Crash</h3>
-          <p class="rating">★ 4.3</p>
-          <button class="btn secondary" disabled>Скоро</button>
+          <h3>Crash «Rocket»</h3>
+          <p class="rating">★ 4.9</p>
+          <button class="btn secondary game-launch">Играть</button>
         </article>
         <article class="game-card online">
           <figure class="game-thumb">
@@ -513,6 +513,107 @@
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section id="rocketGame" class="page-block game-page hidden" data-page="rocket" data-requires-auth="true">
+    <div class="rocket-layout">
+      <aside class="rocket-controls glassy">
+        <div class="rocket-header">
+          <div class="rocket-heading">
+            <button class="btn outline back-to-lobby" data-target="home">← В лобби</button>
+            <h2>Crash «Rocket»</h2>
+          </div>
+          <p class="rocket-subtitle">
+            Успей забрать ставку до того, как ракета сорвётся. Премиальная демо-версия с честной математикой.
+          </p>
+        </div>
+        <div class="rocket-control-card">
+          <label class="rocket-label" for="rocketBetInput">
+            <span>Ставка (₽)</span>
+            <div class="rocket-input-row">
+              <button type="button" class="rocket-step" data-rocket-adjust="decrease" aria-label="Уменьшить ставку">–</button>
+              <input
+                type="number"
+                id="rocketBetInput"
+                min="10"
+                step="10"
+                value="100"
+                inputmode="decimal"
+              />
+              <button type="button" class="rocket-step" data-rocket-adjust="increase" aria-label="Увеличить ставку">+</button>
+            </div>
+          </label>
+          <div class="rocket-presets" role="group" aria-label="Быстрые ставки">
+            <button type="button" class="rocket-preset" data-rocket-preset="50">50₽</button>
+            <button type="button" class="rocket-preset" data-rocket-preset="100">100₽</button>
+            <button type="button" class="rocket-preset" data-rocket-preset="250">250₽</button>
+            <button type="button" class="rocket-preset" data-rocket-preset="500">500₽</button>
+          </div>
+          <label class="rocket-label" for="rocketAutoInput">
+            <span>
+              Авто-кэшаут (×)
+              <button class="rocket-hint" type="button" title="Когда коэффициент достигнет значения, ставка заберётся автоматически. После старта раунда параметр блокируется.">?</button>
+            </span>
+            <div class="rocket-input-row compact">
+              <input
+                type="number"
+                id="rocketAutoInput"
+                min="1.01"
+                step="0.01"
+                value="1.50"
+                inputmode="decimal"
+              />
+            </div>
+          </label>
+          <p class="rocket-status" id="rocketStatusMessage">Ставки открыты. Сделайте ставку, чтобы участвовать в раунде.</p>
+          <button type="button" class="btn primary rocket-primary" id="rocketPrimaryButton">Поставить</button>
+          <div class="rocket-quick-actions">
+            <button type="button" class="btn secondary" id="rocketRepeat">Повторить ставку</button>
+            <button type="button" class="btn outline" id="rocketDouble">×2 ставка</button>
+            <button type="button" class="rocket-reset" id="rocketResetDemo">Сбросить демо-баланс</button>
+          </div>
+        </div>
+        <div class="rocket-disclaimer">
+          <p>Demo-режим. Обучающие цели. Без денежных операций.</p>
+          <p class="rocket-accessibility">Полная поддержка клавиатуры и экранных читалок.</p>
+        </div>
+      </aside>
+      <div class="rocket-stage-wrapper">
+        <div class="rocket-stage glassy" aria-live="polite">
+          <canvas id="rocketCanvas" width="960" height="540" aria-hidden="true"></canvas>
+          <div class="rocket-stage-overlay">
+            <div class="rocket-phase" id="rocketPhase">Этап: ожидание</div>
+            <div class="rocket-multiplier" id="rocketMultiplier">1.00×</div>
+            <div class="rocket-timer" id="rocketTimer" role="timer">
+              <span class="rocket-timer-label" id="rocketTimerLabel">Старт через</span>
+              <span class="rocket-timer-value" id="rocketTimerValue">5.0 c</span>
+            </div>
+            <div class="rocket-cashout-info" id="rocketCashoutInfo"></div>
+          </div>
+        </div>
+        <div class="rocket-stage-footer glassy">
+          <div class="rocket-fair" id="rocketFairBlock">
+            <h4>Provably Fair</h4>
+            <p>Хэш раунда: <span id="rocketRoundHash">—</span></p>
+            <p class="rocket-seeds">
+              Server seed: <span id="rocketServerSeed">—</span><br />
+              Client seed: <span id="rocketClientSeed">—</span><br />
+              Nonce: <span id="rocketNonce">—</span>
+            </p>
+          </div>
+          <div class="rocket-next-round" id="rocketNextRound">
+            <span>Следующий раунд через <strong id="rocketNextTimer">3.0 c</strong></span>
+          </div>
+        </div>
+      </div>
+      <aside class="rocket-history glassy">
+        <div class="rocket-history-header">
+          <h3>История раундов</h3>
+          <p>Последние коэффициенты. Цвет отражает риск.</p>
+        </div>
+        <ul class="rocket-history-list" id="rocketHistoryList" aria-live="polite"></ul>
+      </aside>
     </div>
   </section>
 

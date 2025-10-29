@@ -93,6 +93,33 @@ const blackjackLiveFeed = document.getElementById("blackjackLiveFeed");
 const blackjackLiveList = document.getElementById("blackjackLiveList");
 const backButtons = document.querySelectorAll(".back-to-lobby");
 const brandButton = document.querySelector(".brand[data-target='home']");
+const rocketSection = document.getElementById("rocketGame");
+const rocketCanvas = document.getElementById("rocketCanvas");
+const rocketContext = rocketCanvas ? rocketCanvas.getContext("2d") : null;
+const rocketMultiplierEl = document.getElementById("rocketMultiplier");
+const rocketPhaseEl = document.getElementById("rocketPhase");
+const rocketTimerLabel = document.getElementById("rocketTimerLabel");
+const rocketTimerValue = document.getElementById("rocketTimerValue");
+const rocketCashoutInfo = document.getElementById("rocketCashoutInfo");
+const rocketPrimaryButton = document.getElementById("rocketPrimaryButton");
+const rocketBetInput = document.getElementById("rocketBetInput");
+const rocketAutoInput = document.getElementById("rocketAutoInput");
+const rocketPresetButtons = document.querySelectorAll(".rocket-preset");
+const rocketAdjustButtons = document.querySelectorAll("[data-rocket-adjust]");
+const rocketStatusMessage = document.getElementById("rocketStatusMessage");
+const rocketHistoryList = document.getElementById("rocketHistoryList");
+const rocketNextTimer = document.getElementById("rocketNextTimer");
+const rocketRoundHashEl = document.getElementById("rocketRoundHash");
+const rocketServerSeedEl = document.getElementById("rocketServerSeed");
+const rocketClientSeedEl = document.getElementById("rocketClientSeed");
+const rocketNonceEl = document.getElementById("rocketNonce");
+const rocketNextRoundBlock = document.getElementById("rocketNextRound");
+const rocketRepeatButton = document.getElementById("rocketRepeat");
+const rocketDoubleButton = document.getElementById("rocketDouble");
+const rocketResetDemoButton = document.getElementById("rocketResetDemo");
+const rocketStage = document.querySelector(".rocket-stage");
+
+const ROCKET_CLIENT_SEED_KEY = "neoCasinoRocketClientSeed";
 
 const ACCOUNTS_KEY = "neoCasinoAccounts";
 const CURRENT_USER_KEY = "neoCasinoCurrentUser";
@@ -276,6 +303,41 @@ let blackjackLiveEnabled = false;
 let blackjackLiveTimer = null;
 let blackjackLiveEntries = [];
 let blackjackHandCounter = 0;
+let rocketAnimationId = null;
+let rocketActive = false;
+let rocketPhaseState = "idle";
+let rocketFlightStart = 0;
+let rocketMultiplierValue = 1;
+let rocketCrashPoint = 0;
+let rocketPoints = [];
+let rocketStars = [];
+let rocketLastFrameTime = 0;
+let rocketCashoutMultiplier = null;
+let rocketCashoutAmount = 0;
+let rocketCashoutPoint = null;
+let rocketBetAmount = 0;
+let rocketBetAccepted = false;
+let rocketHasCashedOut = false;
+let rocketCountdownInterval = null;
+let rocketClientSeed = null;
+let rocketServerSeed = null;
+let rocketRoundNonce = 0;
+let rocketRoundHash = null;
+let rocketHistory = [];
+let rocketLastBetAmount = 100;
+let rocketResizeBound = false;
+let rocketAutoTarget = 0;
+
+const rocketConfig = {
+  bettingDuration: 5000,
+  nextRoundDelay: 3200,
+  growthRate: 1.85,
+  minBet: 10,
+  autoMin: 1.01,
+  maxHistory: 18,
+  starCount: 120,
+  demoRecharge: 10000,
+};
 const appState = {
   isAuthenticated: false,
   currentAccount: null,
@@ -339,6 +401,95 @@ function formatSignedAmount(value) {
 
 function formatUsd(value) {
   return `$${usdFormatter.format(roundCurrency(value))}`;
+}
+
+function formatMultiplier(value) {
+  if (!Number.isFinite(value)) return "1.00";
+  return value.toFixed(2);
+}
+
+function clamp(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(Math.max(value, min), max);
+}
+
+function randomHexString(length) {
+  const chars = "abcdef0123456789";
+  let result = "";
+  for (let index = 0; index < length; index += 1) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+}
+
+function formatSeconds(ms) {
+  return `${(Math.max(0, ms) / 1000).toFixed(1)} c`;
+}
+
+function getRocketClientSeed() {
+  if (rocketClientSeed) return rocketClientSeed;
+  try {
+    const stored = localStorage.getItem(ROCKET_CLIENT_SEED_KEY);
+    if (stored) {
+      rocketClientSeed = stored;
+      return stored;
+    }
+    const generated = `client-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(ROCKET_CLIENT_SEED_KEY, generated);
+    rocketClientSeed = generated;
+    return generated;
+  } catch (error) {
+    rocketClientSeed = `client-${randomHexString(8)}`;
+    return rocketClientSeed;
+  }
+}
+
+async function computeRocketHash(payload) {
+  if (typeof window !== "undefined" && window.crypto?.subtle) {
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(payload);
+      const digest = await window.crypto.subtle.digest("SHA-256", data);
+      return Array.from(new Uint8Array(digest))
+        .map((value) => value.toString(16).padStart(2, "0"))
+        .join("");
+    } catch (error) {
+      console.warn("SHA-256 недоступен", error);
+    }
+  }
+  return fallbackRocketHash(payload);
+}
+
+function fallbackRocketHash(payload) {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x1b873593;
+  for (let index = 0; index < payload.length; index += 1) {
+    const code = payload.charCodeAt(index);
+    h1 = Math.imul(h1 ^ code, 2654435761);
+    h2 = Math.imul(h2 ^ code, 2246822507);
+  }
+  h1 = (Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)) >>> 0;
+  h2 = (Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)) >>> 0;
+  return `${h1.toString(16).padStart(8, "0")}${h2.toString(16).padStart(8, "0")}`
+    .repeat(4)
+    .slice(0, 64);
+}
+
+function computeRocketCrashPoint(hash) {
+  if (!hash) return 1.01;
+  const slice = hash.slice(0, 13);
+  const sample = Number.parseInt(slice, 16);
+  const denom = Math.pow(2, 52);
+  const numerator = (denom - 1) * 100;
+  const denominator = denom - sample;
+  if (!Number.isFinite(denominator) || denominator <= 0) {
+    return 100;
+  }
+  const raw = numerator / denominator;
+  if (!Number.isFinite(raw) || raw <= 0) {
+    return 1.01;
+  }
+  return Math.max(1.01, Math.floor(raw) / 100);
 }
 
 function getInitials(value) {
@@ -596,11 +747,23 @@ function showPage(target) {
   }
 
   if (target === "roulette") {
+    if (appState.activeGame === "rocket") {
+      stopRocketExperience();
+    }
     appState.activeGame = "roulette";
     startRouletteCycle();
+  } else if (target === "rocket") {
+    if (appState.activeGame === "roulette") {
+      stopRouletteCycle();
+    }
+    appState.activeGame = "rocket";
+    startRocketExperience();
   } else {
     if (appState.activeGame === "roulette") {
       stopRouletteCycle();
+    }
+    if (appState.activeGame === "rocket") {
+      stopRocketExperience();
     }
     appState.activeGame = target === "blackjack" ? "blackjack" : null;
   }
@@ -618,6 +781,733 @@ function randomInt(min, max) {
 
 function randomChoice(array) {
   return array[Math.floor(Math.random() * array.length)];
+}
+
+function setRocketPhase(phase) {
+  rocketPhaseState = phase;
+  if (rocketPhaseEl) {
+    const labels = {
+      idle: "ожидание",
+      betting: "приём ставок",
+      flight: "полёт",
+      crash: "краш",
+      result: "результат",
+    };
+    rocketPhaseEl.textContent = `Этап: ${labels[phase] || phase}`;
+  }
+}
+
+function updateRocketStatus(message) {
+  if (rocketStatusMessage) {
+    rocketStatusMessage.textContent = message;
+  }
+}
+
+function updateRocketTimerDisplay(label, remaining) {
+  if (rocketTimerLabel) {
+    rocketTimerLabel.textContent = label;
+  }
+  if (rocketTimerValue) {
+    rocketTimerValue.textContent = formatSeconds(remaining);
+  }
+}
+
+function updateRocketNextCountdown(remaining) {
+  if (rocketNextTimer) {
+    rocketNextTimer.textContent = formatSeconds(remaining);
+  }
+}
+
+function clearRocketCountdown() {
+  if (rocketCountdownInterval) {
+    clearInterval(rocketCountdownInterval);
+    rocketCountdownInterval = null;
+  }
+}
+
+function clearRocketTimers() {
+  clearRocketCountdown();
+}
+
+function startRocketCountdown(duration, onTick, onComplete) {
+  clearRocketCountdown();
+  const startedAt = performance.now();
+
+  function tick() {
+    const elapsed = performance.now() - startedAt;
+    const remaining = Math.max(0, duration - elapsed);
+    onTick(remaining);
+    if (remaining <= 0) {
+      clearRocketCountdown();
+      if (typeof onComplete === "function") {
+        onComplete();
+      }
+    }
+  }
+
+  tick();
+  rocketCountdownInterval = window.setInterval(tick, 120);
+}
+
+function resizeRocketCanvas() {
+  if (!rocketCanvas || !rocketStage) return;
+  const ratio = window.devicePixelRatio || 1;
+  const width = rocketStage.clientWidth;
+  const height = rocketStage.clientHeight;
+  if (!width || !height) return;
+  const scaledWidth = Math.floor(width * ratio);
+  const scaledHeight = Math.floor(height * ratio);
+  if (rocketCanvas.width !== scaledWidth || rocketCanvas.height !== scaledHeight) {
+    rocketCanvas.width = scaledWidth;
+    rocketCanvas.height = scaledHeight;
+  }
+  rocketCanvas.style.width = `${width}px`;
+  rocketCanvas.style.height = `${height}px`;
+}
+
+function ensureRocketStars() {
+  if (!rocketCanvas) return;
+  const target = rocketConfig.starCount;
+  const ratio = window.devicePixelRatio || 1;
+  while (rocketStars.length < target) {
+    rocketStars.push({
+      x: Math.random(),
+      y: Math.random(),
+      speed: 0.1 + Math.random() * 0.25,
+      size: (Math.random() * 1.2 + 0.3) * ratio,
+      brightness: 0.35 + Math.random() * 0.45,
+      drift: (Math.random() - 0.5) * 0.04,
+    });
+  }
+}
+
+function updateRocketStars(delta) {
+  ensureRocketStars();
+  rocketStars.forEach((star) => {
+    star.y += delta * star.speed;
+    star.x += delta * star.drift;
+    if (star.y > 1) star.y -= 1;
+    if (star.y < 0) star.y += 1;
+    if (star.x > 1) star.x -= 1;
+    if (star.x < 0) star.x += 1;
+  });
+}
+
+function renderRocketScene() {
+  if (!rocketContext || !rocketCanvas) return;
+  const ctx = rocketContext;
+  const width = rocketCanvas.width;
+  const height = rocketCanvas.height;
+  if (!width || !height) return;
+  const ratio = window.devicePixelRatio || 1;
+
+  ctx.save();
+  ctx.clearRect(0, 0, width, height);
+  const background = ctx.createLinearGradient(0, height, width, 0);
+  background.addColorStop(0, "#050914");
+  background.addColorStop(1, "#0b1326");
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, width, height);
+
+  rocketStars.forEach((star) => {
+    ctx.fillStyle = `rgba(141, 223, 255, ${star.brightness.toFixed(2)})`;
+    const starX = star.x * width;
+    const starY = star.y * height;
+    ctx.beginPath();
+    ctx.arc(starX, starY, star.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const marginX = width * 0.05;
+  const baseY = height * 0.82;
+  const altitudeScale = height * 0.6;
+
+  if (rocketBetAccepted && rocketAutoTarget >= rocketConfig.autoMin) {
+    const altitude = Math.min(1, Math.pow(rocketAutoTarget / rocketCrashPoint, 0.72));
+    const autoY = baseY - altitude * altitudeScale;
+    ctx.strokeStyle = "rgba(169, 112, 255, 0.35)";
+    ctx.setLineDash([6 * ratio, 8 * ratio]);
+    ctx.lineWidth = 1 * ratio;
+    ctx.beginPath();
+    ctx.moveTo(marginX, autoY);
+    ctx.lineTo(width - marginX, autoY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  if (rocketPoints.length > 1) {
+    ctx.lineWidth = 4 * ratio;
+    const gradient = ctx.createLinearGradient(
+      marginX,
+      baseY,
+      width - marginX,
+      baseY - altitudeScale
+    );
+    gradient.addColorStop(0, "rgba(0, 212, 255, 0.85)");
+    gradient.addColorStop(1, "rgba(169, 112, 255, 0.85)");
+    ctx.strokeStyle = gradient;
+    ctx.beginPath();
+    rocketPoints.forEach((point, index) => {
+      const pointX = marginX + point.progress * (width - marginX * 2);
+      const pointY = baseY - point.altitude * altitudeScale;
+      if (index === 0) ctx.moveTo(pointX, pointY);
+      else ctx.lineTo(pointX, pointY);
+    });
+    ctx.stroke();
+
+    const tail = rocketPoints[rocketPoints.length - 1];
+    const rocketX = marginX + tail.progress * (width - marginX * 2);
+    const rocketY = baseY - tail.altitude * altitudeScale;
+    const glow = ctx.createRadialGradient(
+      rocketX,
+      rocketY,
+      0,
+      rocketX,
+      rocketY,
+      40 * ratio
+    );
+    glow.addColorStop(0, "rgba(0, 212, 255, 0.9)");
+    glow.addColorStop(1, "rgba(0, 212, 255, 0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(rocketX, rocketY, 40 * ratio, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(248, 251, 255, 0.9)";
+    ctx.beginPath();
+    ctx.ellipse(rocketX, rocketY, 14 * ratio, 6 * ratio, 0.35, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (rocketCashoutPoint) {
+      const cashoutX = marginX + rocketCashoutPoint.progress * (width - marginX * 2);
+      const cashoutY = baseY - rocketCashoutPoint.altitude * altitudeScale;
+      ctx.fillStyle = "rgba(46, 210, 162, 0.9)";
+      ctx.beginPath();
+      ctx.arc(cashoutX, cashoutY, 6 * ratio, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+}
+
+function updateRocketPrimaryButton() {
+  if (!rocketPrimaryButton) return;
+  if (rocketPhaseState !== "flight" || !rocketBetAccepted || rocketHasCashedOut) return;
+  rocketPrimaryButton.textContent = `Забрать ${formatMultiplier(rocketMultiplierValue)}×`;
+}
+
+async function prepareRocketRoundMetadata() {
+  rocketServerSeed = randomHexString(64);
+  const baseClientSeed = getRocketClientSeed();
+  const accountFragment = appState.currentAccount?.id
+    ? `:${appState.currentAccount.id}`
+    : "";
+  rocketClientSeed = `${baseClientSeed}${accountFragment}`;
+  rocketRoundNonce += 1;
+  const payload = `${rocketServerSeed}:${rocketClientSeed}:${rocketRoundNonce}`;
+  rocketRoundHash = await computeRocketHash(payload);
+  rocketCrashPoint = computeRocketCrashPoint(rocketRoundHash);
+  if (rocketRoundHashEl) rocketRoundHashEl.textContent = rocketRoundHash;
+  if (rocketServerSeedEl) rocketServerSeedEl.textContent = rocketServerSeed;
+  if (rocketClientSeedEl) rocketClientSeedEl.textContent = rocketClientSeed;
+  if (rocketNonceEl) rocketNonceEl.textContent = rocketRoundNonce.toString();
+}
+
+async function launchRocketRound() {
+  if (!rocketActive) return;
+  await prepareRocketRoundMetadata();
+  startRocketFlight();
+}
+
+function startRocketFlight() {
+  setRocketPhase("flight");
+  rocketFlightStart = performance.now();
+  rocketMultiplierValue = 1;
+  rocketPoints = [{ progress: 0, altitude: 0 }];
+  rocketCashoutPoint = null;
+  rocketCashoutMultiplier = null;
+  rocketCashoutAmount = 0;
+  rocketHasCashedOut = false;
+  rocketAutoTarget = clamp(Number.parseFloat(rocketAutoInput?.value || "0"), rocketConfig.autoMin, 100);
+  if (rocketAutoInput) {
+    rocketAutoInput.value = rocketAutoTarget.toFixed(2);
+    rocketAutoInput.disabled = true;
+  }
+  if (rocketMultiplierEl) {
+    rocketMultiplierEl.textContent = "1.00×";
+  }
+  if (rocketPrimaryButton) {
+    if (rocketBetAccepted) {
+      rocketPrimaryButton.disabled = false;
+      rocketPrimaryButton.textContent = "Забрать 1.00×";
+    } else {
+      rocketPrimaryButton.disabled = true;
+      rocketPrimaryButton.textContent = "Наблюдаем";
+    }
+  }
+  updateRocketStatus(
+    rocketBetAccepted
+      ? "Ракета взлетела! Следите за коэффициентом."
+      : "Ракета взлетела. Вы не участвуете в текущем раунде."
+  );
+  setRocketStageState(null);
+  startRocketLoop();
+}
+
+function updateRocketSimulation(timestamp) {
+  if (!rocketActive) return;
+  if (!rocketLastFrameTime) {
+    rocketLastFrameTime = timestamp;
+  }
+  const delta = (timestamp - rocketLastFrameTime) / 1000;
+  rocketLastFrameTime = timestamp;
+  updateRocketStars(delta);
+
+  if (rocketPhaseState === "flight") {
+    const elapsed = (timestamp - rocketFlightStart) / 1000;
+    rocketMultiplierValue = Math.exp(rocketConfig.growthRate * elapsed);
+    if (rocketMultiplierValue >= rocketCrashPoint) {
+      rocketMultiplierValue = rocketCrashPoint;
+    }
+    if (rocketMultiplierEl) {
+      rocketMultiplierEl.textContent = `${formatMultiplier(rocketMultiplierValue)}×`;
+    }
+    updateRocketTimerDisplay("В полёте", elapsed * 1000);
+
+    const progress = Math.min(1, elapsed / 7);
+    const altitude = Math.min(1, Math.pow(rocketMultiplierValue / rocketCrashPoint, 0.72));
+    const lastPoint = rocketPoints[rocketPoints.length - 1];
+    if (!lastPoint || progress - lastPoint.progress > 0.005) {
+      rocketPoints.push({ progress, altitude });
+    } else {
+      rocketPoints[rocketPoints.length - 1] = { progress, altitude };
+    }
+
+    updateRocketPrimaryButton();
+
+    if (
+      rocketBetAccepted &&
+      !rocketHasCashedOut &&
+      rocketAutoTarget >= rocketConfig.autoMin &&
+      rocketMultiplierValue >= rocketAutoTarget
+    ) {
+      handleRocketCashout(true);
+    }
+
+    if (rocketMultiplierValue >= rocketCrashPoint) {
+      triggerRocketCrash();
+    }
+  }
+
+  renderRocketScene();
+}
+
+function startRocketLoop() {
+  if (rocketAnimationId) {
+    cancelAnimationFrame(rocketAnimationId);
+  }
+  rocketLastFrameTime = 0;
+  const step = (time) => {
+    if (!rocketActive) return;
+    updateRocketSimulation(time);
+    rocketAnimationId = requestAnimationFrame(step);
+  };
+  rocketAnimationId = requestAnimationFrame(step);
+}
+
+function setRocketStageState(state) {
+  if (!rocketStage) return;
+  rocketStage.classList.remove("success", "failure", "crash", "shake");
+  if (state === "success") {
+    rocketStage.classList.add("success");
+  } else if (state === "failure") {
+    rocketStage.classList.add("failure", "crash", "shake");
+    setTimeout(() => {
+      rocketStage.classList.remove("shake");
+    }, 420);
+  }
+}
+
+function startRocketBettingPhase() {
+  if (!rocketActive) return;
+  clearRocketTimers();
+  resizeRocketCanvas();
+  ensureRocketStars();
+  setRocketPhase("betting");
+  setRocketStageState(null);
+  rocketMultiplierValue = 1;
+  rocketPoints = [{ progress: 0, altitude: 0 }];
+  rocketCashoutPoint = null;
+  rocketCashoutMultiplier = null;
+  rocketCashoutAmount = 0;
+  rocketBetAmount = Number.parseFloat(rocketBetInput?.value || rocketLastBetAmount || rocketConfig.minBet);
+  rocketBetAccepted = false;
+  rocketHasCashedOut = false;
+  rocketAutoTarget = clamp(Number.parseFloat(rocketAutoInput?.value || "1.50"), rocketConfig.autoMin, 100);
+  if (rocketAutoInput) {
+    rocketAutoInput.disabled = false;
+    rocketAutoInput.value = rocketAutoTarget.toFixed(2);
+  }
+  if (rocketMultiplierEl) {
+    rocketMultiplierEl.textContent = "1.00×";
+  }
+  if (rocketCashoutInfo) {
+    rocketCashoutInfo.textContent = "";
+  }
+  if (rocketPrimaryButton) {
+    rocketPrimaryButton.disabled = false;
+    rocketPrimaryButton.textContent = "Поставить";
+  }
+  if (rocketNextRoundBlock) {
+    rocketNextRoundBlock.classList.add("hidden");
+  }
+  updateRocketNextCountdown(rocketConfig.nextRoundDelay);
+  updateRocketStatus("Ставки открыты. Сделайте ставку, чтобы участвовать в раунде.");
+  updateRocketTimerDisplay("Старт через", rocketConfig.bettingDuration);
+  startRocketCountdown(
+    rocketConfig.bettingDuration,
+    (remaining) => {
+      updateRocketTimerDisplay("Старт через", remaining);
+    },
+    () => {
+      launchRocketRound();
+    }
+  );
+  startRocketLoop();
+  renderRocketScene();
+}
+
+function startRocketExperience() {
+  if (rocketActive || !rocketSection) {
+    return;
+  }
+  rocketActive = true;
+  resizeRocketCanvas();
+  ensureRocketStars();
+  renderRocketScene();
+  if (!rocketResizeBound) {
+    rocketResizeBound = true;
+    window.addEventListener("resize", () => {
+      if (!rocketActive) return;
+      resizeRocketCanvas();
+      ensureRocketStars();
+      renderRocketScene();
+    });
+  }
+  startRocketBettingPhase();
+}
+
+function stopRocketExperience() {
+  if (!rocketActive) return;
+  rocketActive = false;
+  clearRocketTimers();
+  if (rocketAnimationId) {
+    cancelAnimationFrame(rocketAnimationId);
+    rocketAnimationId = null;
+  }
+  setRocketPhase("idle");
+  if (rocketPrimaryButton) {
+    rocketPrimaryButton.disabled = false;
+    rocketPrimaryButton.textContent = "Поставить";
+  }
+  if (rocketAutoInput) {
+    rocketAutoInput.disabled = false;
+  }
+  if (rocketNextRoundBlock) {
+    rocketNextRoundBlock.classList.add("hidden");
+  }
+  updateRocketStatus("Ракета ожидает следующего запуска.");
+  updateRocketTimerDisplay("Старт через", rocketConfig.bettingDuration);
+  if (rocketMultiplierEl) {
+    rocketMultiplierEl.textContent = "1.00×";
+  }
+  rocketPoints = [];
+  renderRocketScene();
+}
+
+function handleRocketPrimaryAction() {
+  if (rocketPhaseState === "betting") {
+    handleRocketBet();
+    return;
+  }
+  if (rocketPhaseState === "flight" && rocketBetAccepted && !rocketHasCashedOut) {
+    handleRocketCashout(false);
+  }
+}
+
+function handleRocketBet() {
+  if (!rocketPrimaryButton || !rocketBetInput) return;
+  if (!appState.isAuthenticated || !appState.currentAccount) {
+    toggleAuthView("login");
+    showPage("auth");
+    showFeedback("Авторизуйтесь, чтобы сделать ставку.");
+    return;
+  }
+  const stake = roundCurrency(Number.parseFloat(rocketBetInput.value));
+  if (!Number.isFinite(stake) || stake < rocketConfig.minBet) {
+    showFeedback(`Минимальная ставка ${formatCurrency(rocketConfig.minBet)}.`);
+    return;
+  }
+  const balance = appState.currentAccount.balance ?? 0;
+  if (balance < stake) {
+    showFeedback("Недостаточно средств на счёте.");
+    return;
+  }
+  appState.currentAccount.balance = roundCurrency(balance - stake);
+  persistCurrentUser();
+  updateBalanceDisplays();
+  rocketBetAmount = stake;
+  rocketBetAccepted = true;
+  rocketLastBetAmount = stake;
+  rocketPrimaryButton.disabled = true;
+  updateRocketStatus(`Ставка ${formatCurrency(stake)} принята. Ожидаем запуск.`);
+  showFeedback("Ставка принята.");
+}
+
+function getRocketAutoValue() {
+  return clamp(Number.parseFloat(rocketAutoInput?.value || "0"), rocketConfig.autoMin, 100);
+}
+
+function handleRocketCashout(isAuto) {
+  if (!rocketBetAccepted || rocketHasCashedOut) return;
+  if (!appState.currentAccount) return;
+  const payout = roundCurrency(rocketBetAmount * rocketMultiplierValue);
+  rocketHasCashedOut = true;
+  rocketCashoutMultiplier = rocketMultiplierValue;
+  rocketCashoutAmount = payout;
+  rocketCashoutPoint = rocketPoints[rocketPoints.length - 1];
+  appState.currentAccount.balance = roundCurrency((appState.currentAccount.balance ?? 0) + payout);
+  persistCurrentUser();
+  updateBalanceDisplays();
+  if (rocketPrimaryButton) {
+    rocketPrimaryButton.disabled = true;
+    rocketPrimaryButton.textContent = `Забрано ${formatMultiplier(rocketCashoutMultiplier)}×`;
+  }
+  if (rocketCashoutInfo) {
+    rocketCashoutInfo.textContent = `Вы забрали ${formatCurrency(payout)} при ${formatMultiplier(
+      rocketCashoutMultiplier
+    )}×${isAuto ? " (авто)" : ""}.`;
+  }
+  updateRocketStatus(
+    isAuto ? "Авто-кэшаут сработал. Ставка зафиксирована." : "Вы забрали ставку вовремя!"
+  );
+  setRocketStageState("success");
+  showFeedback(`Вы забрали при ${formatMultiplier(rocketCashoutMultiplier)}×.`);
+}
+
+function triggerRocketCrash() {
+  if (!rocketActive || rocketPhaseState === "crash" || rocketPhaseState === "result") return;
+  setRocketPhase("crash");
+  const crashMessage = `Краш на ${formatMultiplier(rocketCrashPoint)}×`;
+  if (!rocketHasCashedOut && rocketBetAccepted) {
+    if (rocketCashoutInfo) {
+      rocketCashoutInfo.textContent = `Ставка сгорела при ${formatMultiplier(rocketCrashPoint)}×.`;
+    }
+    updateRocketStatus("Упс! Вы не успели забрать ставку.");
+    setRocketStageState("failure");
+  } else if (!rocketHasCashedOut) {
+    updateRocketStatus(crashMessage);
+  }
+  showFeedback(crashMessage);
+  finalizeRocketRound();
+}
+
+function finalizeRocketRound() {
+  setRocketPhase("result");
+  updateRocketTimerDisplay("Следующий раунд через", rocketConfig.nextRoundDelay);
+  if (rocketNextRoundBlock) {
+    rocketNextRoundBlock.classList.remove("hidden");
+  }
+  const profit = rocketBetAccepted
+    ? rocketHasCashedOut
+      ? roundCurrency(rocketCashoutAmount - rocketBetAmount)
+      : -rocketBetAmount
+    : 0;
+  addRocketHistoryEntry({
+    id: Date.now(),
+    timestamp: Date.now(),
+    crashPoint: rocketCrashPoint,
+    cashedOut: rocketHasCashedOut ? rocketCashoutMultiplier : null,
+    profit,
+    bet: rocketBetAccepted ? rocketBetAmount : 0,
+    points: downsampleRocketPoints(),
+  });
+  renderRocketHistory();
+  startRocketCountdown(
+    rocketConfig.nextRoundDelay,
+    (remaining) => {
+      updateRocketTimerDisplay("Следующий раунд через", remaining);
+      updateRocketNextCountdown(remaining);
+    },
+    () => {
+      startRocketBettingPhase();
+    }
+  );
+}
+
+function downsampleRocketPoints() {
+  if (!rocketPoints.length) return [];
+  const step = Math.max(1, Math.floor(rocketPoints.length / 40));
+  const sampled = rocketPoints
+    .filter((_, index) => index % step === 0)
+    .map((point) => ({ progress: point.progress, altitude: point.altitude }));
+  const last = rocketPoints[rocketPoints.length - 1];
+  if (!sampled.length || sampled[sampled.length - 1].progress !== last.progress) {
+    sampled.push({ progress: last.progress, altitude: last.altitude });
+  }
+  return sampled;
+}
+
+function addRocketHistoryEntry(entry) {
+  rocketHistory.unshift(entry);
+  if (rocketHistory.length > rocketConfig.maxHistory) {
+    rocketHistory = rocketHistory.slice(0, rocketConfig.maxHistory);
+  }
+}
+
+function renderRocketHistory() {
+  if (!rocketHistoryList) return;
+  rocketHistoryList.innerHTML = "";
+  rocketHistory.forEach((entry) => {
+    const tone = entry.crashPoint < 1.5 ? "low" : entry.crashPoint < 3 ? "mid" : "high";
+    const item = document.createElement("li");
+    item.className = `rocket-history-item ${tone}`;
+    item.tabIndex = 0;
+
+    const header = document.createElement("div");
+    header.className = "rocket-history-row";
+    const multiplierValue = document.createElement("strong");
+    multiplierValue.textContent = `${formatMultiplier(entry.crashPoint)}×`;
+    const cashoutLabel = document.createElement("span");
+    cashoutLabel.textContent = entry.cashedOut
+      ? `Кэшаут ${formatMultiplier(entry.cashedOut)}×`
+      : "Без кэшаута";
+    header.append(multiplierValue, cashoutLabel);
+    item.appendChild(header);
+
+    if (entry.points && entry.points.length > 1) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 100 32");
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.classList.add("rocket-history-spark");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", buildSparklinePath(entry.points));
+      path.setAttribute("fill", "none");
+      path.setAttribute(
+        "stroke",
+        entry.cashedOut ? "rgba(46, 210, 162, 0.9)" : "rgba(0, 212, 255, 0.85)"
+      );
+      path.setAttribute("stroke-width", "2");
+      path.setAttribute("stroke-linecap", "round");
+      svg.appendChild(path);
+      item.appendChild(svg);
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "rocket-history-meta";
+    const time = document.createElement("span");
+    time.textContent = new Intl.DateTimeFormat("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(new Date(entry.timestamp));
+    const profit = document.createElement("span");
+    profit.textContent = entry.bet > 0 ? formatSignedAmount(entry.profit) : "—";
+    meta.append(time, profit);
+    item.appendChild(meta);
+
+    item.addEventListener("click", () => {
+      const detail = entry.cashedOut
+        ? `Забрали при ${formatMultiplier(entry.cashedOut)}×`
+        : "Без кэшаута";
+      showFeedback(`Раунд ${formatMultiplier(entry.crashPoint)}× • ${detail}`);
+    });
+    item.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        item.click();
+      }
+    });
+
+    rocketHistoryList.appendChild(item);
+  });
+}
+
+function buildSparklinePath(points) {
+  if (!points.length) return "";
+  return points
+    .map((point, index) => {
+      const x = (point.progress * 100).toFixed(2);
+      const y = ((1 - point.altitude) * 32).toFixed(2);
+      return `${index === 0 ? "M" : "L"}${x},${y}`;
+    })
+    .join(" ");
+}
+
+function handleRocketPreset(event) {
+  if (!(event instanceof Event)) return;
+  const button = event.currentTarget;
+  const value = Number.parseFloat(button?.dataset.rocketPreset || "0");
+  if (!rocketBetInput || !Number.isFinite(value)) return;
+  rocketBetInput.value = value.toString();
+  rocketLastBetAmount = value;
+}
+
+function handleRocketAdjust(event) {
+  if (!rocketBetInput) return;
+  const button = event.currentTarget;
+  const action = button?.dataset.rocketAdjust;
+  const step = Number.parseFloat(rocketBetInput.step || "10") || 10;
+  const current = Number.parseFloat(rocketBetInput.value || "0") || rocketConfig.minBet;
+  let next = current;
+  if (action === "increase") {
+    next = current + step;
+  } else if (action === "decrease") {
+    next = Math.max(rocketConfig.minBet, current - step);
+  }
+  rocketBetInput.value = roundCurrency(next).toString();
+  rocketLastBetAmount = roundCurrency(next);
+}
+
+function handleRocketRepeat() {
+  if (!rocketBetInput) return;
+  rocketBetInput.value = roundCurrency(rocketLastBetAmount || rocketConfig.minBet).toString();
+}
+
+function handleRocketDouble() {
+  if (!rocketBetInput) return;
+  const current = Number.parseFloat(rocketBetInput.value || "0") || rocketConfig.minBet;
+  const doubled = roundCurrency(current * 2);
+  rocketBetInput.value = doubled.toString();
+  rocketLastBetAmount = doubled;
+}
+
+function handleRocketResetBalance() {
+  if (!appState.isAuthenticated || !appState.currentAccount) {
+    showFeedback("Авторизуйтесь, чтобы управлять балансом.");
+    return;
+  }
+  appState.currentAccount.balance = roundCurrency(
+    (appState.currentAccount.balance ?? 0) + rocketConfig.demoRecharge
+  );
+  persistCurrentUser();
+  updateBalanceDisplays();
+  showFeedback(`Демо-баланс пополнен на ${formatCurrency(rocketConfig.demoRecharge)}.`);
+}
+
+function handleRocketAutoChange() {
+  if (!rocketAutoInput) return;
+  const value = getRocketAutoValue();
+  rocketAutoInput.value = value.toFixed(2);
+}
+
+function handleRocketBetInput() {
+  if (!rocketBetInput) return;
+  const value = roundCurrency(Number.parseFloat(rocketBetInput.value || "0"));
+  if (Number.isFinite(value) && value >= rocketConfig.minBet) {
+    rocketLastBetAmount = value;
+  }
 }
 
 function clearRouletteBoard() {
@@ -2139,6 +3029,7 @@ function handleLogout() {
   clearCurrentUser();
   stopRouletteCycle();
   initializeBlackjackState();
+  stopRocketExperience();
   hideDropdown();
   setAuthenticatedState(false);
   updateDashboardData();
@@ -2163,6 +3054,8 @@ function openGame(gameKey) {
   } else if (gameKey === "blackjack") {
     showPage("blackjack");
     initializeBlackjackState();
+  } else if (gameKey === "rocket") {
+    showPage("rocket");
   }
 }
 
@@ -2238,6 +3131,22 @@ backButtons.forEach((button) => {
     showPage(target);
   });
 });
+
+rocketPrimaryButton?.addEventListener("click", handleRocketPrimaryAction);
+rocketPresetButtons.forEach((button) => {
+  button.addEventListener("click", handleRocketPreset);
+});
+rocketAdjustButtons.forEach((button) => {
+  button.addEventListener("click", handleRocketAdjust);
+});
+rocketRepeatButton?.addEventListener("click", handleRocketRepeat);
+rocketDoubleButton?.addEventListener("click", handleRocketDouble);
+rocketResetDemoButton?.addEventListener("click", handleRocketResetBalance);
+rocketAutoInput?.addEventListener("change", handleRocketAutoChange);
+rocketAutoInput?.addEventListener("blur", handleRocketAutoChange);
+rocketBetInput?.addEventListener("change", handleRocketBetInput);
+rocketBetInput?.addEventListener("blur", handleRocketBetInput);
+rocketBetInput?.addEventListener("input", handleRocketBetInput);
 
 loginForm?.addEventListener("submit", handleLogin);
 registerForm?.addEventListener("submit", handleRegister);
