@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeoCasino — концепт дизайна</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="neo_casino_styles.css" />
+</head>
+<body class="light-mode">
+  <div class="background-gradient"></div>
+  <div class="floating-gifts" aria-hidden="true">
+    <div class="gift"></div>
+    <div class="gift"></div>
+    <div class="gift"></div>
+  </div>
+
+  <header class="top-bar">
+    <button class="brand" type="button" data-target="home">NeoCasino</button>
+    <nav class="top-nav">
+      <button class="nav-link active" data-target="home">Главная</button>
+      <button class="nav-link" data-target="auth">Авторизация</button>
+    </nav>
+    <div class="header-controls">
+      <div class="user-controls hidden" id="userControls">
+        <button class="btn secondary dashboard-link" id="dashboardLink">Личный кабинет</button>
+        <div class="balance-menu">
+          <button class="balance-button" id="balanceButton" aria-haspopup="true" aria-expanded="false">
+            Баланс: <span id="balanceAmount">0₽</span>
+          </button>
+          <div class="balance-dropdown hidden" id="balanceDropdown">
+            <button class="dropdown-action" data-action="deposit">Пополнить</button>
+            <button class="dropdown-action" data-action="withdraw">Вывести</button>
+          </div>
+        </div>
+      </div>
+      <div class="toggles">
+        <button class="mode-toggle" id="modeToggle" aria-label="Переключить тему">
+          <span class="toggle-icon">🌙</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+  <main>
+    <section id="authPage" class="page-block auth-page hidden" data-page="auth">
+      <div class="auth-card glassy">
+        <h1>Добро пожаловать в NeoCasino</h1>
+        <div class="auth-views">
+          <form class="auth-form" id="loginForm" autocomplete="off">
+            <div class="auth-form-header">
+              <h2>Вход в аккаунт</h2>
+              <p>Используйте зарегистрированную почту и пароль.</p>
+            </div>
+            <label class="input-group">
+              <span>Почта</span>
+              <input type="email" name="email" placeholder="Введите почту" required />
+            </label>
+            <label class="input-group">
+              <span>Пароль</span>
+              <input type="password" name="password" placeholder="Введите пароль" required />
+            </label>
+            <p class="form-feedback hidden" id="loginFeedback"></p>
+            <div class="auth-actions">
+              <button type="submit" class="btn primary">Войти</button>
+              <button type="button" class="btn secondary auth-switch" data-target="register">Регистрация</button>
+            </div>
+          </form>
+
+          <form class="auth-form hidden" id="registerForm" autocomplete="off">
+            <div class="auth-form-header">
+              <h2>Регистрация</h2>
+              <p>Создайте аккаунт, чтобы начать играть и управлять балансом.</p>
+            </div>
+            <label class="input-group">
+              <span>Никнейм</span>
+              <input type="text" name="nickname" placeholder="Ваш никнейм" required minlength="3" />
+            </label>
+            <label class="input-group">
+              <span>Почта</span>
+              <input type="email" name="email" placeholder="name@example.com" required />
+            </label>
+            <label class="input-group">
+              <span>Пароль</span>
+              <input type="password" name="password" placeholder="Создайте пароль" required minlength="6" />
+            </label>
+            <label class="input-group">
+              <span>Подтверждение пароля</span>
+              <input type="password" name="confirm" placeholder="Повторите пароль" required minlength="6" />
+            </label>
+            <label class="rules-check">
+              <input type="checkbox" name="rules" required />
+              <span>Я подтверждаю, что ознакомлен и принимаю правила казино</span>
+            </label>
+            <p class="form-feedback hidden" id="registerFeedback"></p>
+            <div class="auth-actions">
+              <button type="submit" class="btn primary">Создать аккаунт</button>
+              <button type="button" class="btn secondary auth-switch" data-target="login">Назад к входу</button>
+            </div>
+          </form>
+        </div>
+        <p class="demo-note">Это демо-сайт для развлекательных целей</p>
+      </div>
+    </section>
+
+    <section id="dashboard" class="page-block dashboard hidden" data-page="dashboard" data-requires-auth="true">
+      <div class="dashboard-header">
+        <div class="welcome">Добро пожаловать, <span class="accent">Гость</span></div>
+          <div class="balance-card glassy">
+            <div>
+              <p class="balance-label">Баланс</p>
+            <p class="balance-amount">0₽</p>
+            </div>
+            <div class="balance-actions">
+              <button class="btn primary">Пополнить</button>
+              <button class="btn outline">Вывести</button>
+            </div>
+        </div>
+      </div>
+
+      <div class="dashboard-body">
+        <aside class="side-menu glassy">
+          <button class="menu-item active" data-tab="profile">
+            <span class="icon">👤</span>
+            <span>Профиль</span>
+          </button>
+          <button class="menu-item" data-tab="security">
+            <span class="icon">🔐</span>
+            <span>Безопасность</span>
+          </button>
+          <button class="menu-item" data-tab="notifications">
+            <span class="icon">🔔</span>
+            <span>Уведомления</span>
+          </button>
+          <button class="menu-item" data-tab="vip">
+            <span class="icon">💎</span>
+            <span>Программа</span>
+          </button>
+          <button class="menu-item" data-tab="missions">
+            <span class="icon">🎯</span>
+            <span>Миссии</span>
+          </button>
+          <button class="menu-item logout" id="logoutButton">
+            <span class="icon">🚪</span>
+            <span>Выйти</span>
+          </button>
+        </aside>
+
+        <div class="tabs glassy">
+          <div class="tab-content active" id="profile">
+            <div class="profile-card">
+              <div class="avatar">
+                <span id="profileInitials">NP</span>
+              </div>
+              <div class="profile-info">
+                <h2 id="profileName">NeoPlayer</h2>
+                <p><span id="profileLevel">Уровень 1</span> • <span id="profileExperience">Опыт 0/100</span></p>
+                <div class="progress">
+                  <div class="progress-bar" id="profileProgress" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="profile-grid">
+              <article class="info-tile">
+                <h3>Статистика</h3>
+                <ul>
+                  <li>Побед: <span id="profileWins">0</span></li>
+                  <li>Любимая игра: <span id="profileFavourite">—</span></li>
+                  <li>VIP-уровень: <span id="profileVip">Новичок</span></li>
+                </ul>
+              </article>
+              <article class="info-tile">
+                <h3>Активность</h3>
+                <p>Последний визит: <span id="profileVisit">—</span></p>
+                <p>Серия побед: <span id="profileStreak">0</span></p>
+              </article>
+            </div>
+            <div class="profile-settings-card">
+              <h3>Настройки профиля</h3>
+              <form id="profileEditForm" class="profile-edit-form" autocomplete="off">
+                <div class="profile-edit-grid single-column">
+                  <label class="input-group">
+                    <span>Никнейм</span>
+                    <input type="text" name="nickname" id="profileEditNickname" minlength="3" required />
+                  </label>
+                </div>
+                <div class="profile-edit-actions">
+                  <button type="submit" class="btn primary">Сохранить изменения</button>
+                </div>
+                <p class="form-feedback hidden" id="profileEditFeedback"></p>
+              </form>
+            </div>
+
+            <div class="profile-history-card">
+              <div class="profile-history-header">
+                <div>
+                  <h3>История игр</h3>
+                  <p>Последние результаты ваших игр</p>
+                </div>
+                <button class="btn outline history-refresh" type="button" id="historyRefreshButton">Обновить</button>
+              </div>
+              <ul class="history-list" id="gameHistoryList" aria-live="polite"></ul>
+            </div>
+          </div>
+
+          <div class="tab-content" id="security">
+            <h2>Безопасность</h2>
+            <div class="security-grid">
+              <div class="security-item">
+                <div>
+                  <h3>Двухфакторная аутентификация</h3>
+                  <p>Добавьте дополнительный уровень защиты аккаунта.</p>
+                </div>
+                <button class="btn outline">Настроить</button>
+              </div>
+              <div class="security-item">
+                <div>
+                  <h3>Смена пароля</h3>
+                  <p>Рекомендуем обновлять пароль каждые 3 месяца.</p>
+                </div>
+                <button class="btn outline" type="button" id="changePasswordButton">Изменить</button>
+              </div>
+              <div class="security-item">
+                <div>
+                  <h3>Смена почты</h3>
+                  <p>Текущая почта: <span id="securityEmailValue">—</span></p>
+                </div>
+                <button class="btn outline" type="button" id="changeEmailButton">Обновить</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="notifications">
+            <h2>Настройки уведомлений</h2>
+            <div class="notification-list">
+              <label class="toggle">
+                <span>Живая лента</span>
+                <input type="checkbox" id="liveTickerToggle" checked />
+                <span class="slider"></span>
+              </label>
+              <label class="toggle">
+                <span>Промо-акции и бонусы</span>
+                <input type="checkbox" checked />
+                <span class="slider"></span>
+              </label>
+              <label class="toggle">
+                <span>Системные уведомления</span>
+                <input type="checkbox" checked />
+                <span class="slider"></span>
+              </label>
+              <label class="toggle">
+                <span>Игровые события</span>
+                <input type="checkbox" />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="tab-content" id="vip">
+            <h2>Программа лояльности</h2>
+            <div class="vip-tiers">
+              <div class="vip-tier">
+                <h3>Silver</h3>
+                <p>Кэшбек 5%, быстрые выплаты.</p>
+              </div>
+              <div class="vip-tier active">
+                <h3>Gold</h3>
+                <p>Персональный менеджер, эксклюзивные турниры.</p>
+              </div>
+              <div class="vip-tier">
+                <h3>Diamond</h3>
+                <p>VIP-ивенты, премиальные подарки, увеличенный кэшбек.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="missions">
+            <h2>Дневные миссии</h2>
+            <div class="missions-list">
+              <article class="mission">
+                <h3>Сделай 3 ставки — получи бонус!</h3>
+                <p>Прогресс: 2/3</p>
+                <div class="progress">
+                  <div class="progress-bar" style="width: 66%"></div>
+                </div>
+              </article>
+              <article class="mission">
+                <h3>Выиграй в слотах 5 раз</h3>
+                <p>Прогресс: 1/5</p>
+                <div class="progress">
+                  <div class="progress-bar" style="width: 20%"></div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="home" class="page-block home" data-page="home">
+      <div class="hero glassy">
+        <div class="hero-content">
+          <h1>NeoCasino — почувствуй азарт</h1>
+          <p>Геймифицированный портал с честными выигрышами, ежедневными миссиями и живой атмосферой.</p>
+          <div class="hero-actions">
+            <button class="btn primary">Играть сейчас</button>
+            <button class="btn outline">Узнать больше</button>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="chip"></div>
+          <div class="dice"></div>
+          <div class="coin"></div>
+        </div>
+      </div>
+
+      <div class="game-filters glassy">
+        <span>Категории игр</span>
+        <div class="switch" role="radiogroup">
+          <button class="switch-option active" data-category="online">Онлайн</button>
+          <button class="switch-option" data-category="offline">Оффлайн</button>
+        </div>
+      </div>
+
+      <div class="game-grid">
+        <article class="game-card online" data-game="roulette">
+          <figure class="game-thumb">
+            <img src="https://i.imgur.com/jXl2rG7.jpeg" alt="Колесо рулетки" loading="lazy" />
+          </figure>
+          <h3>Онлайн Рулетка</h3>
+          <p class="rating">★ 4.8</p>
+          <button class="btn secondary game-launch">Играть</button>
+        </article>
+        <article class="game-card offline" data-game="blackjack">
+          <figure class="game-thumb">
+            <img src="https://i.imgur.com/txlCdxO.png" alt="Логотип блэкджека" loading="lazy" />
+          </figure>
+          <h3>Оффлайн Блэкджэк</h3>
+          <p class="rating">★ 4.7</p>
+          <button class="btn secondary game-launch">Играть</button>
+        </article>
+        <article class="game-card online">
+          <figure class="game-thumb">
+            <img
+              src="https://images.unsplash.com/photo-1619474446860-0e53e13d9a9f?auto=format&fit=crop&w=400&q=80"
+              alt="Яркие барабаны игрового автомата"
+              loading="lazy"
+            />
+          </figure>
+          <h3>Fruit Spin</h3>
+          <p class="rating">★ 4.5</p>
+          <button class="btn secondary" disabled>Скоро</button>
+        </article>
+        <article class="game-card offline">
+          <figure class="game-thumb">
+            <img
+              src="https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=400&q=80"
+              alt="Неоновая вспышка в темном казино"
+              loading="lazy"
+            />
+          </figure>
+          <h3>Neon Crash</h3>
+          <p class="rating">★ 4.3</p>
+          <button class="btn secondary" disabled>Скоро</button>
+        </article>
+        <article class="game-card online">
+          <figure class="game-thumb">
+            <img
+              src="https://images.unsplash.com/photo-1533237264985-ee7a4c0873c1?auto=format&fit=crop&w=400&q=80"
+              alt="Игроки за покерным столом"
+              loading="lazy"
+            />
+          </figure>
+          <h3>Turbo Poker</h3>
+          <p class="rating">★ 4.6</p>
+          <button class="btn secondary" disabled>Скоро</button>
+        </article>
+        <article class="game-card offline">
+          <figure class="game-thumb">
+            <img
+              src="https://images.unsplash.com/photo-1526682847805-7214b00af12c?auto=format&fit=crop&w=400&q=80"
+              alt="Сияющее колесо фортуны"
+              loading="lazy"
+            />
+          </figure>
+          <h3>Lucky Wheel</h3>
+          <p class="rating">★ 4.2</p>
+          <button class="btn secondary" disabled>Скоро</button>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer glassy">
+    <div class="vip-panel">
+      <h3>Программа лояльности</h3>
+      <p>Собирайте опыт, открывайте уровни Silver, Gold и Diamond, получайте эксклюзивные бонусы.</p>
+    </div>
+    <div class="missions-panel">
+      <h3>Дневные миссии</h3>
+      <p>Ежедневно выполняйте задания и забирайте дополнительные награды.</p>
+    </div>
+  </footer>
+
+  <div class="chat-widget" aria-label="Чат-поддержка">
+    <button class="chat-button">💬</button>
+  </div>
+
+  <div class="live-ticker glassy" aria-live="polite">
+    <div class="ticker-track" id="tickerTrack">
+      <span>🎉 Игрок LuckyFox выиграл 1200₽ в Fruit Spin!</span>
+      <span>🔥 User_234 сделал ставку 500₽ в Рулетке!</span>
+      <span>🏆 NeoQueen сорвала джекпот 3 400₽ в Turbo Poker!</span>
+    </div>
+  </div>
+
+  <section id="rouletteGame" class="page-block game-page hidden" data-page="roulette" data-requires-auth="true">
+    <div class="game-layout glassy">
+      <div class="game-header">
+        <div class="game-title">
+          <button class="btn outline back-to-lobby" data-target="home">← В лобби</button>
+          <h2>Онлайн Рулетка</h2>
+        </div>
+        <p>Сделайте ставку на один цвет и запустите колесо удачи.</p>
+      </div>
+      <div class="game-body">
+        <div class="game-visual roulette-stage">
+          <div class="roulette-wrapper">
+            <div class="roulette-wheel" id="rouletteWheel">
+              <div class="wheel-inner"></div>
+              <div class="wheel-center"></div>
+            </div>
+            <div class="roulette-pointer" id="roulettePointer"></div>
+          </div>
+          <div class="roulette-phase" id="roulettePhase">Приём ставок</div>
+          <div class="roulette-timer">До спина: <span id="rouletteCountdown">18.0</span> c</div>
+          <div class="roulette-history">
+            <div class="roulette-history-header">
+              <span class="roulette-history-icon" aria-hidden="true">⟳</span>
+              <div class="roulette-history-text">
+                <h3>История вращений</h3>
+                <p>Последние 12 раундов</p>
+              </div>
+            </div>
+            <div class="roulette-history-track" id="rouletteHistory" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="game-controls">
+          <form id="rouletteForm" class="bet-form">
+            <div class="bet-amount-row">
+              <label class="input-group compact">
+                <span>Размер ставки (₽)</span>
+                <input
+                  type="number"
+                  name="stake"
+                  min="100"
+                  step="50"
+                  placeholder="Минимум 100"
+                  required
+                  id="rouletteStake"
+                />
+              </label>
+              <div class="bet-quick-panel" role="group" aria-label="Быстрый выбор ставки">
+                <button type="button" class="bet-quick-button" data-amount="100">100</button>
+                <button type="button" class="bet-quick-button" data-amount="500">500</button>
+                <button type="button" class="bet-quick-button" data-amount="1000">1000</button>
+              </div>
+            </div>
+            <fieldset class="bet-choices">
+              <legend>Выбор цвета</legend>
+              <div class="bet-choice-row">
+                <label class="bet-choice">
+                  <input type="radio" name="color" value="red" required />
+                  <span class="bet-button red">Красное</span>
+                </label>
+                <label class="bet-choice">
+                  <input type="radio" name="color" value="black" />
+                  <span class="bet-button black">Чёрное</span>
+                </label>
+                <label class="bet-choice">
+                  <input type="radio" name="color" value="green" />
+                  <span class="bet-button green">Зелёное</span>
+                </label>
+              </div>
+            </fieldset>
+            <button type="submit" class="btn primary" id="rouletteStart">Сделать ставку</button>
+          </form>
+          <div class="game-status">
+            <div class="roulette-number" id="rouletteNumber">-</div>
+            <p class="roulette-status" id="rouletteStatus">Ставка ещё не сделана.</p>
+          </div>
+          <p class="form-feedback hidden" id="rouletteFeedback"></p>
+        </div>
+      </div>
+      <div class="roulette-bets-board">
+        <h3>Ставки других игроков</h3>
+        <div class="roulette-columns">
+          <div class="roulette-column" data-color="red">
+            <h4>Красное</h4>
+            <ul id="rouletteColumnRed" class="roulette-bets-list"></ul>
+          </div>
+          <div class="roulette-column" data-color="black">
+            <h4>Чёрное</h4>
+            <ul id="rouletteColumnBlack" class="roulette-bets-list"></ul>
+          </div>
+          <div class="roulette-column" data-color="green">
+            <h4>Зелёное</h4>
+            <ul id="rouletteColumnGreen" class="roulette-bets-list"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="blackjackGame" class="page-block game-page hidden" data-page="blackjack" data-requires-auth="true">
+    <div class="game-layout glassy blackjack-layout">
+      <div class="game-header">
+        <div class="game-title">
+          <button class="btn outline back-to-lobby" data-target="home">← В лобби</button>
+          <h2>Блэкджэк</h2>
+        </div>
+        <p>Минималистичный стол, неоновые акценты и полный набор действий против дилера.</p>
+      </div>
+      <div class="game-body blackjack-body">
+        <aside class="blackjack-sidebar">
+          <form id="blackjackForm" class="blackjack-stake-form" autocomplete="off">
+            <div class="stake-header">
+              <span>Текущая ставка</span>
+              <strong id="blackjackStakeDisplay">$0.20</strong>
+            </div>
+            <div class="stake-adjust">
+              <button type="button" class="chip-control" data-action="decrease">–</button>
+              <button type="button" class="chip-control" data-action="increase">+</button>
+              <button type="button" class="chip-control" data-action="half">÷2</button>
+              <button type="button" class="chip-control" data-action="double">×2</button>
+            </div>
+            <label class="input-group compact">
+              <span>Введите сумму</span>
+              <input
+                type="number"
+                id="blackjackStakeInput"
+                name="stake"
+                min="0.1"
+                step="0.1"
+                value="0.2"
+                required
+              />
+            </label>
+            <button type="submit" class="btn neon" id="blackjackDeal">Раздать</button>
+            <label class="live-toggle">
+              <input type="checkbox" id="blackjackLiveToggle" />
+              <span>Live режим</span>
+            </label>
+          </form>
+          <div class="blackjack-live-feed hidden" id="blackjackLiveFeed">
+            <h4>Live ставки</h4>
+            <ul id="blackjackLiveList"></ul>
+          </div>
+        </aside>
+        <div class="blackjack-stage">
+          <div class="blackjack-table-surface">
+            <div class="table-legend">
+              <span class="legend-title">BLACKJACK PAYS 3 TO 2</span>
+              <span class="legend-sub">Dealer must stand on 17 and must draw to 16</span>
+              <span class="legend-insurance">Insurance pays 2 to 1</span>
+            </div>
+            <div class="dealer-zone">
+              <div class="hand-meta">
+                <span class="hand-label">Дилер</span>
+                <span class="hand-score" id="blackjackDealerTotal">0</span>
+              </div>
+              <div class="hand-cards" id="blackjackDealerCards"></div>
+            </div>
+            <div class="player-zone">
+              <div id="blackjackPlayerHands" class="player-hands"></div>
+            </div>
+          </div>
+          <div class="blackjack-status-bar">
+            <p id="blackjackStatus">Сделайте ставку и нажмите «Раздать».</p>
+          </div>
+          <div class="blackjack-actions-row">
+            <button type="button" class="blackjack-action stop" id="blackjackStand">Стоп</button>
+            <button type="button" class="blackjack-action hit" id="blackjackHit">Ещё</button>
+            <button type="button" class="blackjack-action double" id="blackjackDouble">×2 Удвоить</button>
+            <button type="button" class="blackjack-action split" id="blackjackSplit">Сплит</button>
+          </div>
+          <div class="blackjack-footer">
+            <div class="blackjack-totals">
+              <span>Ставка: <strong id="blackjackBetTotal">$0.00</strong></span>
+              <span>Баланс: <strong id="blackjackBalance">$0.00</strong></span>
+            </div>
+            <div class="blackjack-meta">
+              <span>Provably fair protected</span>
+              <span>RTP 99.5%</span>
+            </div>
+          </div>
+          <p class="form-feedback hidden" id="blackjackFeedback"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="modal-overlay hidden" id="passwordModal" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+    <div class="modal-card">
+      <button class="modal-close" type="button" data-close-modal aria-label="Закрыть окно"></button>
+      <h3 id="passwordModalTitle">Изменение пароля</h3>
+      <form id="passwordChangeForm" class="modal-form" autocomplete="off">
+        <label class="input-group">
+          <span>Текущий пароль</span>
+          <input type="password" name="current" required minlength="6" />
+        </label>
+        <label class="input-group">
+          <span>Новый пароль</span>
+          <input type="password" name="next" required minlength="6" />
+        </label>
+        <label class="input-group">
+          <span>Повторите новый пароль</span>
+          <input type="password" name="confirm" required minlength="6" />
+        </label>
+        <p class="form-feedback hidden" id="passwordFeedback"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn secondary" data-close-modal>Отмена</button>
+          <button type="submit" class="btn primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="emailModal" role="dialog" aria-modal="true" aria-labelledby="emailModalTitle">
+    <div class="modal-card">
+      <button class="modal-close" type="button" data-close-modal aria-label="Закрыть окно"></button>
+      <h3 id="emailModalTitle">Смена почты</h3>
+      <form id="emailChangeForm" class="modal-form" autocomplete="off">
+        <label class="input-group">
+          <span>Новая почта</span>
+          <input type="email" name="email" required />
+        </label>
+        <label class="input-group">
+          <span>Повторите почту</span>
+          <input type="email" name="confirm" required />
+        </label>
+        <label class="input-group">
+          <span>Подтвердите пароль</span>
+          <input type="password" name="password" required minlength="6" />
+        </label>
+        <p class="form-feedback hidden" id="emailFeedback"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn secondary" data-close-modal>Отмена</button>
+          <button type="submit" class="btn primary">Обновить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="neo_casino_interactions.js"></script>
+</body>
+</html>
